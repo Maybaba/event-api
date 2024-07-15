@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 public class EventUser {
 
     @Id
-    @GeneratedValue(generator = "uuid-fenerator")
+    @GeneratedValue(generator = "uuid-generator")
     @GenericGenerator(strategy = "uuid2", name = "uuid-generator")
     @Column(name = "ev_user_id")
     private String id; //회원계정 아님, 랜덤문자 PK
@@ -39,5 +39,11 @@ public class EventUser {
     //이메일 인증을 완료했는지 여부
     //엔터티에 boolean 타입을 사용하면 실제 DB엔 0,1로 저장됨에 주의!
     //true : 1 false : 0
+    @Setter
     private boolean emailVerified;
+
+    public void confirm(String password) {
+        this.password = password;
+        this.createAt = LocalDateTime.now();
+    }
 }
