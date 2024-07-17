@@ -2,18 +2,25 @@ package com.study.event.api.event.controller;
 
 import com.study.event.api.event.dto.request.EventUserSaveDto;
 import com.study.event.api.event.dto.request.LoginRequestDto;
+import com.study.event.api.event.dto.response.LoginResponseDto;
 import com.study.event.api.event.service.EventUserService;
 import com.study.event.api.exception.LoginFailException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.sql.SQLException;
+import java.util.NoSuchElementException;
+
+import static com.study.event.api.auth.TokenProvider.*;
+
 
 @RestController
 @RequestMapping("/auth")
 @Slf4j
 @RequiredArgsConstructor
-//@CrossOrigin(origins = {"http://localhost:3000"}) //조건이 없으면 모든 곳에서 오는 요청을 허가한다.
 public class EventUserController {
 
     private final EventUserService eventUserService;
@@ -23,25 +30,20 @@ public class EventUserController {
     public ResponseEntity<?> checkEmail(String email) {
         boolean isDuplicate = eventUserService.checkEmailDuplicate(email);
 
-        //중복된 이메일이 아니면 코드 전송
-        if(!isDuplicate) {
-            eventUserService.sendVerificationEmail(email);
-        }
-
         return ResponseEntity.ok().body(isDuplicate);
     }
 
-    //인증 코드 검증 API
+    // 인증 코드 검증 API
     @GetMapping("/code")
     public ResponseEntity<?> verifyCode(String email, String code) {
+
         log.info("{}'s verify code is [ {} ]", email, code);
+        boolean isMatch = eventUserService.isMatchCode(email, code);
 
-       boolean isMatch = eventUserService.isMatchCode(email, code);
-
-       return ResponseEntity.ok().body(isMatch);
+        return ResponseEntity.ok().body(isMatch);
     }
 
-    //회원가입 마무리 처리
+    // 회원가입 마무리 처리
     @PostMapping("/join")
     public ResponseEntity<?> join(@RequestBody EventUserSaveDto dto) {
 
@@ -56,17 +58,38 @@ public class EventUserController {
         return ResponseEntity.ok().body("saved success");
     }
 
+
     @PostMapping("/sign-in")
     public ResponseEntity<?> signIn(@RequestBody LoginRequestDto dto) {
 
         try {
-            eventUserService.authenticate(dto);
-            return ResponseEntity.ok().body("login success");
+            LoginResponseDto responseDto = eventUserService.authenticate(dto);
+            return ResponseEntity.ok().body(responseDto);
         } catch (LoginFailException e) {
-            //서비스에서 예외발생 (로그인실패)
+            // 서비스에서 예외발생 (로그인 실패)
             String errorMessage = e.getMessage();
             return ResponseEntity.status(422).body(errorMessage);
         }
+
     }
+
+    // Premium회원으로 등급업하는 요청처리
+    @PutMapping("/promote")
+    public ResponseEntity<?> promote(
+            @AuthenticationPrincipal TokenUserInfo userInfo
+    ) {
+
+        try {
+            LoginResponseDto dto = eventUserService.promoteToPremium(userInfo.getUserId());
+            return ResponseEntity.ok().body(dto);
+        } catch (NoSuchElementException e) {
+            log.warn(e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+//        catch (SQLException e) {
+//            return ResponseEntity.internalServerError().body();
+//        }
+    }
+
 
 }

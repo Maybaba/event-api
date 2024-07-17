@@ -1,15 +1,17 @@
 package com.study.event.api.auth;
 
 import com.study.event.api.event.entity.EventUser;
+import com.study.event.api.event.entity.Role;
+import com.study.event.api.event.repository.EventUserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.awt.*;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -24,6 +26,9 @@ public class TokenProvider {
     // 서명에 사용할 512비트의 랜덤 문자열 비밀키
     @Value("${jwt.secret}")
     private String SECRET_KEY;
+
+    //토큰을 넣지 않았을 때 레포지토리에서 가져올 수 있다
+    private EventUserRepository eventUserRepository;
 
 
     /**
@@ -53,6 +58,8 @@ public class TokenProvider {
         claims.put("email", eventUser.getEmail());
         claims.put("role", eventUser.getRole().toString());
 
+        // object로 들어갔기 때문에 문자열로 꺼낼때 캐스팅해야한다.
+
         return Jwts.builder()
                 // token에 들어갈 서명
                 .signWith(
@@ -61,7 +68,7 @@ public class TokenProvider {
                 )
                 // payload에 들어갈 클레임 설정
                 .setClaims(claims) // 추가 클레임은 항상 가장 먼저 설정
-                .setIssuer("메롱메롱") // 발급자 정보
+                .setIssuer("메롱시티") // 발급자 정보
                 .setIssuedAt(new Date()) // 발급 시간
                 .setExpiration(Date.from(
                         Instant.now().plus(1, ChronoUnit.DAYS)
@@ -73,10 +80,11 @@ public class TokenProvider {
     /**
      * 클라이언트가 전송한 토큰을 디코딩하여 토큰의 서명 위조 여부를 확인
      * 그리고 토큰을 JSON으로 파싱하여 안에 들어있는 클레임(토큰 정보)을 리턴
+     *
      * @param token - 클라이언트가 보낸 토큰
-     * @return -  토큰에 들어있는 인증정보들 리턴 - 회원 식별ID
+     * @return - 토큰에 들어있는 인증 정보들을 리턴 - 회원 식별 ID, 이메일, 권한정보
      */
-    public String validateAndGetTokenInfo(String token) {
+    public TokenUserInfo validateAndGetTokenInfo(String token) {
 
         Claims claims = Jwts.parserBuilder()
                 // 토큰 발급자의 발급 당시 서명을 넣음
@@ -91,10 +99,25 @@ public class TokenProvider {
 
         log.info("claims: {}", claims);
 
-        // 토큰에 인증된 회원의 PK
-        String userId = claims.getSubject();
+        // 토큰에 인증된 회원의 PK (이름)
+//        return claims.getSubject();
+        // 토큰에 인증된 회원의 PK (이름), 이메일, 권한
+        return TokenUserInfo.builder()
+                .userId(claims.getSubject())
+                .email(claims.get("email", String.class))
+                .role(Role.valueOf(claims.get("role", String.class)))
+                .build();
+    }
 
-        return userId;
-
+    @Getter
+    @ToString
+    @EqualsAndHashCode
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class TokenUserInfo {
+        private String userId;
+        private Role role;
+        private String email;
     }
 }
