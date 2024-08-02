@@ -40,22 +40,22 @@ jobs:
           port: ${{ secrets.PORT }}
           script: |
             echo "Docker login..."
-            docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_PASSWORD }}
+            /usr/local/bin/docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_PASSWORD }}
             
             echo "Write the docker-compose.yml"
             echo "${{ secrets.DOCKER_COMPOSE_YML }}" > ./docker-compose.yml
             
             echo "Stopping existing container..."
-            docker compose down || true
+            /usr/local/bin/docker compose down || true
             
             echo "Remove Existing Docker image..."
-            docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/event-api:latest || true
+            /usr/local/bin/docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/event-api:latest || true
             
             echo "Pulling Docker image..."
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/event-api:latest
+            /usr/local/bin/docker pull ${{ secrets.DOCKERHUB_USERNAME }}/event-api:latest
             
             echo "Starting new container..."
-            docker compose up -d 
+            /usr/local/bin/docker compose up -d 
 
 
 #            echo "Stopping existing container..."
