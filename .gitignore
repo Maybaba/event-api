@@ -1,6 +1,7 @@
 
 .idea/
 application.yml
+application-docker.yml
 
 .gradle
 build/
